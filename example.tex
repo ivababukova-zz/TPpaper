@@ -59,7 +59,7 @@ Each instance of TP consists of:
 
 \item The total travel time $T$, within which the traveller must have visited all destinations and returned to the home point. The first day is day 0.
  
-\item A set of flights $F = \{ f_{0},...,f_{m} \}$. Each flight $f_{j}$ has:
+\item A set of flights $F = \{ f_{0},...,f_{m-1} \}$. Each flight $f_{j}$ has:
 \begin{itemize}[topsep=1pt]
 \setlength\itemsep{0.1em}
 \item departure airport $A^{d}_{j}$,
@@ -202,110 +202,105 @@ Constraint 1 restricts the domains of the first and the $(z-1)^{th}$ variable in
 \subsubsection{Choice of CP Solver}
 We use Choco 4.
 
-% \subsection{IP Solution}
-% Most of the constraints for the TP CP model need modification in order to be applicable to an IP model. In particular, IP does not allow for ``if-then'', ``all-different'' and other constraints that are not integer linear inequalities. The model described in this section is a modification of the TP CP model that gives constraints in the form of integer linear inequalities, which we also refer to as \textit{constraints}.
+\subsection{IP Solution}
+Most of the constraints for the TP CP model need modification in order to be applicable to an IP model. In particular, IP does not allow for ``if-then'', ``all-different'' and other constraints that are not integer linear inequalities. The model described in this section is a modification of the TP CP model that gives constraints in the form of integer linear inequalities, which we also refer to as \textit{constraints}.
 
-% \subsubsection{IP Model}
-% Let $m = |F|$. We introduce a variable $x_{i,j}$ for every $i \in \{0,...,m-1\}$ and  $j \in \{0,...,m-1\}$, such that $x_{i,j} = 1$ if $(i+1)^{th}$ flight is $f_{j+1}$ or 0 otherwise. This variable is somewhat similar to $\mathcal{S}$, used for the CP model, where $\mathcal{S}[i] = p$ is equivalent to $x_{i,p} = 1$. In addition, we introduce a variable $x_{m,m} = 1$, where flight $f_{m}$ is a ``special'' flight with duration $\Delta_{j} = 0$, date $t_{j} = T$, departure and arrival airports $A^{d}_{j} = A^{a}_{j} = A_{0}$ and cost $c_{j} = 0$ This special flight is used for enforcing the valid ending of the trip at the home point without the need of an additional variable, as it is the case with $z$ in the CP model. The special flight can be scheduled more than once. It is added to $F$ and the new size of $F$ is $m^\prime = m + 1$. The first occurrence of $f_m$ marks the end of the trip.
+\subsubsection{IP Model}
+Let $m = |F|$. We introduce a variable $x_{i,j}$ for every $i \in \{0,...,m-1\}$ and  $j \in \{0,...,m-1\}$, such that $x_{i,j} = 1$ if $(i+1)^{th}$ flight is $f_{j+1}$ or 0 otherwise. This variable is somewhat similar to $\mathcal{S}$, used for the CP model, where $\mathcal{S}[i] = p$ is equivalent to $x_{i,p} = 1$. In addition, we introduce a set of variables $x_{m,j}$, for $(0 \leq j \leq m)$, where flight $f_{m}$ is a ``special'' flight with duration $\Delta_{j} = 0$, date $t_{j} = T$, departure and arrival airports $A^{d}_{j} = A^{a}_{j} = A_{0}$ and cost $c_{j} = 0$. We do not add connection time when connecting from $A_{0}$ to $A_{0}$ as part of these flights. The special flight is used for enforcing the valid ending of the trip at the home point without the need of an additional variable, as it is the case with $z$ in the CP model, by setting $x_{m,m} = 1$. The special flight can be scheduled more than once, provided that if $x_{i,m} = 1$ for $(0 < i < m)$, then for every $i^\prime$ $(i < i^\prime \leq m)$, $x_{i^\prime,m} = 1$ and the first occurrence of $f_m$ marks the end of the trip. Flight $f_{m}$ is added to $F$.
 
-% The variable $x_{i,j}$ is implemented as a two dimensional matrix of size $m^\prime \times m^\prime$.
+The variable $x_{i,j}$ is implemented as a two dimensional matrix of size $m^\prime \times m^\prime$.
 
-% todo explain why we need the special flight
+The objective function of TP is to minimise:
 
-% The objective function of TP is to minimise:
+\begin{equation}
+\label{eq:TPwithIPobj}
+\sum^{m-1}_{i=0} \sum^{m}_{j=0} c_{j} x_{i,j}
+\end{equation}
 
-% \begin{equation}
-% \label{eq:TPwithIPobj}
-% \sum^{m-1}_{i=0} \sum^{m}_{j=0} c_{j} x_{i,j}
-% \end{equation}
+subject to the constraints presented below.
 
-% subject to the constraints presented below.
+The first of the following three constraints imposes the restriction that there is exactly one scheduled flight at each step by adding a requirement that each row $i$ in the matrix has one 1. The second constraint ensures that each flight is taken at most once. The first and second constraints are equivalent to the all-different constraint used in the CP model. The second and third constraints allow for flight schedules to be constructed that do not use all flights in $F$.
 
-% \textcolor{red}{The first of the following three constraints restricts that there is exactly one scheduled flight at each step by adding a requirement that each row $i$ in the matrix has one 1. The second constraint imposes that each flight is taken at most once. The first and the second constraint are equivalent to the all-different constraint used in the CP model. The second and the third constraint allow for constructing flight schedules that do not use all flights in $F$.}
+\begin{itemize}
+\Item
+$\forall i \, (0 \leq i < m), \quad \sum^{m}_{j = 0} x_{i,j} = 1 $
+\Item
+$\forall j \, (0 \leq j < m), \quad \sum^{m-1}_{i = 0}x_{i,j} \leq 1$
+\Item
+$\sum_{i=0}^{i = m} x_{i,m} \geq 1$
+\Item
+$x_{m,m} = 1$
+\end{itemize}
 
-% \begin{itemize}
-% \Item
-% $\forall i \, (0 \leq i < m), \quad \sum^{m}_{j = 0} x_{i,j} = 1 $
-% \Item
-% $\textcolor{red}{\forall j \, (0 \leq j < m), \quad \sum^{m-1}_{i = 0}x_{i,j} \leq 1} $
-% \Item
-% $\textcolor{red}{\sum_{i=0}^{i = m} x_{i,m} \geq 1 }$
-% \end{itemize}
+The following constraint enforces the property that once the trip is ended, no more flights can be scheduled. Assume that flight $z-1$ is the final flight returning to $A_{0}$, where $1 \leq z \leq m$. The constraint adds $m-z+1$ many $f_{m}$ flights, so that the variables $x_{z,m},...,x_{m,m}$ are all equal to 1.
 
-% \textcolor{red}{The following constraint enforces that once the trip is ended, no more flights can be scheduled. Assume that flight $z-1$ is the final flight returning to $A_{0}$, where $1 \leq z \leq m$. The constraint adds $m-z+1$ many $f_{m}$ flights, so that the variables $x_{z,m},...,x_{m,m}$ are all equal to 1.}
-% \begin{itemize}
-% \color{red}
-% \Item 
-% $\forall i \, (1 \leq i < m), \quad \sum_{j=0}^{j<m} x_{i-1,j} \geq  \sum_{j=0}^{j<m} x_{i,j}$
-% \end{itemize}
+\begin{itemize}
+\Item 
+$\forall i \, (1 \leq i < m), \quad x_{i-1,m} \leq x_{i,m}$
+\end{itemize}
 
-% Each of the trip properties is expressed as an integer linear inequality as follows.
+Each of the trip properties is expressed as an integer linear inequality as follows.
 
-%We do not add connection time when connecting from $A_{0}$ to $A_{0}$ as part of these flights.
+The following two constraints enforce trip property (1). The first flight is restricted to depart from the home point and the last flight arrives at the home point. From trip property (2) it follows that there must exist some $z < m$, $x_{z,j} = 1$, for which $j \neq m$ and $A^{a}_{j} = A_{0}$. Thus, $A^{a}_{j} = A_{0}$ is indirectly enforced.
 
-% The following two constraints enforce trip property (1). The first flight is restricted to depart from the home point and the last flight arrives at the home point. From trip property (2) it follows that there must exist some $z < m$, $x_{z,j} = 1$, for which $j \neq m$ and $A^{a}_{j} = A_{0}$. Thus, $A^{a}_{j} = A_{0}$ is indirectly enforced.
+\begin{itemize}
+% property 1:
+\Item
+$\sum_{j \in S_{1}} x_{0,j} = 1, \, \textrm{where}$
+\item[]
+$ S_{1} = \{j \in \{0,...,m-1\} : A^{d}_{j} = A_{0}\}$
+\Item
+$x_{m,m} = 1$
+\end{itemize}
 
-% \begin{itemize}
-% % property 1:
-% \Item
-% $\sum_{j \in S_{1}} x_{0,j} = 1, \, \textrm{where}$
-% \item[]
-% $ S_{1} = \{j \in \{0,...,m-1\} : A^{d}_{j} = A_{0}\}$
-% \Item
-% $x_{m,m} = 1$
-% \end{itemize}
+Property (2) is enforced by defining two sets of flights $S_{1}$ and $S_{2}$, such that all flights in $S_{2}$ depart from the arrival airport of $S_{1}$. Every flight is restricted to depart always from the arrival airport of the previous taken flight.
 
-% Property (2) is enforced by defining two sets of flights $S_{1}$ and $S_{2}$, such that all flights in $S_{2}$ depart from the arrival airport of $S_{1}$. Every flight is restricted to depart always from the arrival airport of the previous taken flight.
+\begin{itemize}
+% property 2:
+\Item
+$\forall i \, (1 \leq i \leq m) \wedge \forall y \in A, \, \sum_{j \in S_{1}} x_{i-1,j} = \sum_{j^{\prime} \in S_{2}} x_{i,j^{\prime}},$
+\item[]
+$\textrm{where:}$
+\item[]
+$S_{1} = \{j \in \{0,...,m\} : A^{a}_{j} = y\},$
+\item[]
+$S_{2} = \{j^{\prime} \in \{0,...,m\} : A^{d}_{j^{\prime}} = y\}$
+\end{itemize}
 
-% \begin{itemize}
-% % property 2:
-% \Item
-% $\forall i \, (1 \leq i \leq m) \wedge \forall y \in A, \, \sum_{j \in S_{1}} x_{i-1,j} = \sum_{j^{\prime} \in S_{2}} x_{i,j^{\prime}},$
-% \item[]
-% $\textrm{where:}$
-% \item[]
-% $S_{1} = \{j \in \{0,...,m\} : A^{a}_{j} = y\},$
-% \item[]
-% $S_{2} = \{j^{\prime} \in \{0,...,m\} : A^{d}_{j^{\prime}} = y\}$
-% \end{itemize}
+Trip properties (3) and (4) are represented by one constraint, which enforces that every flight $f_{j}$ cannot depart until the previous flight $f_{j^{\prime}}$ has arrived, adding connection time, if needed.
 
-% Trip properties (3) and (4) are represented by one constraint, which enforces that every flight $f_{j}$ cannot depart until the previous flight $f_{j^{\prime}}$ has arrived, adding connection time, if needed.
+\begin{itemize}
+% property 3 and 4:
+\Item
+$\forall i \, (0 \leq i < m), \, \forall j \, (0 \leq j \leq m):$
+\item[]
+$x_{i+1,j} + \sum_{j^{\prime} \in F^{\prime}} x_{i,j^{\prime}} \leq 1, \, \textrm{where:} $
+\item[]
+$F^{\prime} = \{j^{\prime} : f_{j^{\prime}} \in F \wedge t_{j^{\prime}} + \Delta_{j^{\prime}} + C^{\prime}_{r} > t_{j} \},$
+\item[]
+$C^{\prime}_{r} =   \begin{cases}
+0, \quad \textrm{ if } j=m \\
+C_{A^{a}_{j^{\prime}}}, \quad \textrm{ otherwise}
+\end{cases}
+$
+\end{itemize}
 
-% \begin{itemize}
-% % property 3 and 4:
-% \Item
-% $\forall i \, (0 \leq i < m), \, \forall j \, (0 \leq j \leq m):$
-% \item[]
-% $x_{i+1,j} + \sum_{j^{\prime} \in F^{\prime}} x_{i,j^{\prime}} \leq 1, \, \textrm{where:} $
-% \item[]
-% $F^{\prime} = \{j^{\prime} : f_{j^{\prime}} \in F \wedge t_{j^{\prime}} + \Delta_{j^{\prime}} + C^{\prime}_{r} > t_{j} \},$
-% \item[]
-% $C^{\prime}_{r} =   \begin{cases}
-% 0, \quad \textrm{ if } j=m \\
-% C_{A^{a}_{j^{\prime}}}, \quad \textrm{ otherwise}
-% \end{cases}
-% $
-% \end{itemize}
+% property 5:
+Trip property (5) is enforced by restricting that all destination airports must be visited by at least one flight:
 
-% % property 5:
-% Trip property (5) is enforced by restricting that all destination airports must be visited by at least one flight:
+\begin{itemize}
+\Item
+$\forall A_{k} \in D, \, \sum_{i=0}^{m-1} \sum_{j \in F_{k}} x_{i,j} \geq 1, \, \textrm{where:} $
+\item[]
+$F_{k}= \{j : f_{j}\in F \wedge A^{a}_{j} = A_{k}\} $
+\end{itemize}
 
-% \begin{itemize}
-% \Item
-% $\forall A_{k} \in D, \, \sum_{i=0}^{m-1} \sum_{j \in F_{k}} x_{i,j} \geq 1, \, \textrm{where:} $
-% \item[]
-% $F_{k}= \{j : f_{j}\in F \wedge A^{a}_{j} = A_{k}\} $
-% \end{itemize}
+\subsubsection{Choice of IP Solver}
 
-% \subsubsection{Choice of IP Solver}
-
-% \subsection{Soft and Hard Constraints}
-
-%todo: Explain the implementation of the soft and hard constraints.
-
+\subsection{Soft and Hard Constraints}
 
 \subsubsection{Hard Constraint 2}
-Hard constraint 2 (HC2) in Section \ref{subsec:hardconstraints} is implemented in the CP model as follows. Let $P = \{p_{1},...,p_{h}\}$ denote the list of every HC2 for a given TP instance $\pi$. Each HC2 is represented as a pair $p_{r} = \langle A_{k_{r}}, t_{i_r} \rangle \in P$ for $0 \leq r \leq h \leq |D|$, where the traveller must be at destination $A_{k_r} \in D$ at date $t_{i_r} < T$.
+Hard constraint 2 (HC2) in Section \ref{subsec:hardconstraints} is implemented in the CP model as follows. Let $P = \{p_{1},...,p_{h}\}$ denote the list of every HC2 for a given TP instance $\pi$, where each HC2 is represented as a pair $p_{r} = \langle A_{k_{r}}, t_{i_r} \rangle \in P$ for $0 \leq r \leq h \leq |D|$, where the traveller must be at destination $A_{k_r} \in D$ at date $t_{i_r} < T$.
 
 We introduce an array $\mathcal{D}$ of size $h$. The domain of each variable in $\mathcal{D}$ is $\{1,...,m\}$. If $\mathcal{D}[r] = i$, then the flight at position $\mathcal{S}[i]$ departs from $A_{k_r}$ at least one day after date $t_{i}$ \footnote{It is assumed that the traveller wants to stay at least for a day after the required date. Ideally, the solver should allow for taking this as an input parameter.} and the flight $\mathcal{S}[i-1]$ arrives at $A_{k}$ before date $t_{i_r}$, satisfying $p_{r}$. This is achieved by the following constraints:
 
@@ -325,7 +320,44 @@ $S_{2} = \{j^\prime : f_{j^\prime} \in F \wedge A{^d}_{j^\prime} = A_{k_{r}} \we
 $\textrm{allDiff}(\mathcal{D}[1],...,\mathcal{D}[h])$
 \end{itemize}
 
-\subsection{Objective Functions}
+\subsection{Additional Objective Functions}
+
+\subsubsection{Number of Flights}
+
+The IP objective function for minimising or maximising the number of flights taken during the trip is the following:
+
+$$\sum^{i = m}_{i = 0} x_{i,m}$$
+
+\subsubsection{Trip Duration}
+
+The trip duration objective function for the IP model is implemented as follows.
+Let $S_{0} = \{j \in \{0, ..., m-1\} : A^a_j = A_0 \}$ of size $s$ be the list of all flights that arrive at the home point. We introduce a set of variables $y_{i,j}$ for every $i \in \{0, ..., m-1\}$ and $j \in \{0,...,s\}$, such that if $y_{i,j} = 1$, then the last flight is $S_0[j]$ and it is taken at the $i^{th}$ step of the trip. We use the observation that if $S_0[j]$ is the last flight in the trip, taken at position $i$, then $x_{i,j} \times x_{i+1,m} = 1$.
+% \begin{itemize}
+% \Item
+% $\forall i (0 \leq i < m) \, \forall j (0 \leq j \leq s), \,
+% y_{i,j} = x_{i,j} \times x_{i+1,m}$
+% \end{itemize}
+This is equivalent to the following set of IP constraints:
+\begin{itemize}
+\item[]
+$\forall i (0 \leq i < m) \, \forall j (0 \leq j \leq s):$
+\Item
+$\quad y_{i,j} \geq 0$
+\item[]
+$\quad y_{i,j} \leq x_{i,j}$
+\item[]
+$\quad y_{i,j} \leq x_{i+1,m}$
+\item[]
+$\quad y_{i,j} \geq x_{i,j} + x_{i+1,m} - 1$
+\end{itemize}
+
+Then, the trip duration is equal to:
+
+$$\sum^{i = m}_{i=0} \sum_{j \in S_{0}} (t_{S_0[j]} + \Delta_{S_0[j]}) \times y_{i,j}$$
+
+\subsubsection{Number of Connections}
+
+This is implemented only in the CP model for now.
 
 \section{TP Datasets}
 This section is dedicated to the process of obtaining all TP instances used later during the evaluation.
@@ -346,7 +378,7 @@ Program $G$ is written in Python. Given a number of flights $m$, a number of air
 
 TP instances are generated using the following steps. First, $G$ chooses $n$ airports, each with randomly assigned connection time between 0.01 and 1 and a unique string as name. From these airports, one is chosen as a home point and $d$ are chosen as destinations.
 
-Next, $G$ generates a list $l$ consisting of the names of all destinations and the home point. The first and the last element in $l$ is the name of the home point. The other elements are all destinations, ordered randomly.
+Next, $G$ generates an ordered list $l$ consisting of the names of all destinations and the home point. The first and the last element in $l$ is the name of the home point. The other elements are all destinations.
 
 As a third step, $G$ creates a list of flights $l_f$ that forms a valid trip and visit all airports in the specified order in $l$.
 
